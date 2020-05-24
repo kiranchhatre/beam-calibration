@@ -31,7 +31,7 @@ with open(shared+'/total_iters.txt', 'w') as f:
 
 iter_now = open(shared+'/total_iters.txt', 'r')
 
-################################### Repair phase
+################################### Repair phase (maintaining original lastIteration value)
 os.rename(file_conf, file_txt)
 
 with open(file_txt, 'r') as fin:

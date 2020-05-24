@@ -1,10 +1,12 @@
 # Author: Kiran Chhatre
-import itertools, glob, itertools, re
+import itertools, glob, re
 from functools import reduce
 from operator import add
 import pandas as pd
 
 shared = '/home/berkeleylab/Model/storage'
+
+# Maintain total_iters.txt to store iteration count info, also is it required since we are saving file names with iter count?
 
 def initializers(what_type, which_iter, which_stage):
     
