@@ -25,14 +25,10 @@ def create_conf_copies(no_iters):
         shutil.copy(beam+'/test/input/sf-light/urbansim-10k.conf',beam+'/test/input/sf-light/urbansim-10k_'+str(num+1)+'.conf')
 
 def ext_change(param):
-if param == 'edit':
-    os.rename(picked_conf_file, picked_conf_file[:-4] + 'txt')
-elif param == 'save':  
-    os.rename(filename, filename[:-3] + 'conf')
-
-def del_conf_copies():
-    for filename in glob.glob(beam+'/test/input/sf-light/urbansim-10k_*.conf'):  
-        os.remove(filename)
+    if param == 'edit':
+        os.rename(picked_conf_file, picked_conf_file[:-4] + 'txt')
+    elif param == 'save':  
+        os.rename(filename, filename[:-3] + 'conf')
 
 def change_conf(input_vector):
     with open(filename, 'r') as fin: 
@@ -99,19 +95,32 @@ for i in range(len(counter)):
         parallel_passes = 4
     create_conf_copies(no_iters=parallel_passes)
 
-    # BEAM run (Start new process for these)
     for i in range(len(parallel_passes)):
         picked_conf_file = beam+'/test/input/sf-light/urbansim-10k_'+str(i)+'.conf'
         ext_change('edit')
         filename = beam+'/test/input/sf-light/urbansim-10k_'+str(i)+'.txt'
         change_conf(input_vector=input_vector[i])    
         ext_change('save')
-        with open(beam+"/instanceconfpath.txt", "w") as text_file: 
-            text_file.write(picked_conf_file)
-        subprocess.call([beam+'/runme.sh'])
+    with open(beam+"/writecue.txt", "w") as text_file: 
+        text_file.write('write '+str(i)+' done')  
+    while True:
+        with open(beam+"/firecue.txt", 'r') as fin: 
+            file_text=fin.readlines()
+        print('Waiting for the fire cue...')
+        if file_text == 'fire '+str(i)+' done':
+            break
 
-    # bookkeeping (Start new process for these) 
-    output_folders = find_op_folder(time_now=time_now, parallel_passes=parallel_passes)
+def fire_BEAM(number):  
+    import os
+    print('BEAM fired on '+str(os.getpid())+' PID.')
+    picked_conf_file = beam+'/test/input/sf-light/urbansim-10k_'+str(number)+'.conf'
+    with open(beam+"/instanceconfpath.txt", "w") as text_file: 
+        text_file.write(picked_conf_file)
+    subprocess.call([beam+'/runme.sh'])
+
+
+def bookkeep(how_many):
+    output_folders = find_op_folder(time_now=time_now, parallel_passes=how_many)
     for j in range(len(output_folders)):
         out_file = output_folders[j] + '/referenceRealizedModeChoice.csv'
         while not os.path.exists(out_file):
@@ -120,7 +129,6 @@ for i in range(len(counter)):
             df =  pd.read_csv(out_file)
         else:
             raise ValueError("%s isn't a file!" % file_path)
-
         df['iterations'][1] = 'modeshare_now'
         df.loc[-1] = ['intercepts_now'] + input_vector_base[i] 
         df.index = df.index+1 
@@ -133,7 +141,6 @@ for i in range(len(counter)):
         total_L1 = df.loc['L1'].abs().sum()
         df.to_csv(shared+'/'+str(j)+'_'+total_L1+'.csv', sep='\t', encoding='utf-8')  
 
-    del_conf_copies()
 
 
 
